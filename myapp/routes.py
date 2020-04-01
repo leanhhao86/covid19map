@@ -10,7 +10,7 @@ def index():
 
 	headers = {
 	    'x-rapidapi-host': "covid-19-data.p.rapidapi.com",
-	    'x-rapidapi-key': "7913d4fae2msh11423dcc67a27c7p118feejsn4851b5e928a4"
+	    'x-rapidapi-key': ""
 	    }
 
 	response = requests.request("GET", url, headers=headers, params=querystring)
