@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COVID-19 Visualized</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.2/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.2/addons/p5.dom.min.js"></script>
+  <script src="{{ url_for('static', filename='mappa.min.js') }}" type="text/javascript"></script>
+</head>
+
+<body>
+  <script>
+// Create a variable to hold our map
+let myMap;
+// Create a variable to hold our canvas
+let canvas;
+// Create a new Mappa instance using Leaflet.
+const mappa = new Mappa('Leaflet');
+// map options
+var options = {
+	lat: 0,
+	lng: 0,
+	zoom: 3,
+	style: "http://{s}.tile.osm.org/{z}/{x}/{y}.png"
+}
+
+var countries = [];
+var confirmeds = [];
+var deaths = [];
+var minC = 0;
+var maxC = 0;
+var minD = 0;
+var maxD = 0;
+var confirmedMode = true;
+let modeBtn;
+
+function setup(){
+  	// Create a canvas 640x640
+	canvas = createCanvas(screen.width, screen.height);
+	myMap = mappa.tileMap(options); 
+   	// Overlay tile map on top of the canvas
+   	myMap.overlay(canvas);
+   	//myMap.onChange(redrawLocation);
+   	modeBtn = createButton("confirmed - deaths toggle");
+   	modeBtn.mousePressed(toggleMode);
+   	// start with APIs
+   	fetchInfo();
+}
+
+function toggleMode() {
+	if (confirmedMode) {
+		confirmedMode = false;
+	} else {
+		confirmedMode = true;
+	}
+}
+
+function fetchInfo() {
+	var data = JSON.parse('{{ data | tojson | safe }}');
+	//console.log(data);
+	data.forEach(ctr => {
+		if (ctr.latitude)
+			countries.push(ctr);
+	});
+	countries.forEach(ctr => {
+		confirmeds.push(Number(ctr.confirmed));	
+		deaths.push(Number(ctr.deaths));
+	});
+   	minC = Math.min(...confirmeds);	
+	maxC = Math.max(...confirmeds); 
+	minD = Math.min(...deaths);
+	maxD = Math.max(...deaths);
+
+}
+
+function drawConfirmed() {
+	clear();
+	//console.log(minC, maxC);
+	//console.log(countries);
+	countries.forEach(ctr => {
+		if (ctr.confirmed != 0) {
+			let loc = myMap.latLngToPixel(ctr.latitude, ctr.longitude);
+			// console.log(myMap.zoom());	
+			let size = map(ctr.confirmed, minC, maxC, 1, 30);
+			//console.log(size);
+			size = size * Math.pow(2,myMap.zoom());
+			fill(70, 138, 70, 100);
+			let inc = (size / 10) * Math.sin(frameCount * 0.02);
+			ellipse(loc.x, loc.y, size + inc, size + inc);
+			// draw numbers
+			fill(213, 235, 52);
+			textSize(size/5);
+			text(ctr.confirmed, loc.x - size/5, loc.y);
+		}
+	});
+}
+
+function drawDeaths() {
+	clear();
+	//console.log(minC, maxC);
+	//console.log(countries);
+	countries.forEach(ctr => {
+		if (ctr.deaths != 0) {
+			let loc = myMap.latLngToPixel(ctr.latitude, ctr.longitude);
+			// console.log(myMap.zoom());	
+			let size = map(ctr.deaths, minD, maxD, 1, 30);
+			//console.log(size);
+			size = size * Math.pow(2,myMap.zoom());
+			fill(204, 51, 31, 100);
+			let inc = (size / 10) * Math.sin(frameCount * 0.02);
+			ellipse(loc.x, loc.y, size + inc, size + inc);
+			// draw numbers
+			fill(213, 235, 52);
+			textSize(size/5);
+			text(ctr.deaths, loc.x - size/5, loc.y);
+		}
+	});	
+}
+
+
+
+// p5.js draw
+function draw(){
+	if (confirmedMode)
+		drawConfirmed();
+	else 
+		drawDeaths();
+}
+  </script>
+
+</body>
+
+</html>
