@@ -1,2 +1,4 @@
 # covid19map
-Displaying confirmed cases and deaths
+A project using Mappjs, P5js and Flask as backend engine.
+This displays confirmed cases and deaths from covids on a world map, the API is probably expired here so a little tweaking is needed to work with other APIs.
+
