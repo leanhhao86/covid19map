@@ -3,129 +3,143 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>COVID-19 Visualized</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.2/p5.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.2/addons/p5.dom.min.js"></script>
-  <script src="{{ url_for('static', filename='mappa.min.js') }}" type="text/javascript"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+ <!-- Make sure you put this AFTER Leaflet's CSS -->
+ <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+   integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+   crossorigin=""></script>
+<script type="text/javascript" src="{{ url_for('static', filename='vietnam.js')}}"></script>
 </head>
 
+
 <body>
+  	 <div id="mapid"style="width: 800px; height: 700px;">
+  	 
+  	 </div>
   <script>
-// Create a variable to hold our map
-let myMap;
-// Create a variable to hold our canvas
-let canvas;
-// Create a new Mappa instance using Leaflet.
-const mappa = new Mappa('Leaflet');
-// map options
-var options = {
-	lat: 0,
-	lng: 0,
-	zoom: 3,
-	style: "http://{s}.tile.osm.org/{z}/{x}/{y}.png"
-}
+  		var mymap = L.map('mapid').setView([15.053803, 108.092475], 6);
+	L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibGVhbmhoYW84NiIsImEiOiJja3NsY2I1d3gwM3F1MnZwMHNqdjM1ZGp1In0.Z53YTZDAkhoyLjgvDCX4_w', {
+		maxZoom: 40,
+		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+			'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+		id: 'mapbox/streets-v11',
+		tileSize: 512,
+		zoomOffset: -1
+	}).addTo(mymap);
 
-var countries = [];
-var confirmeds = [];
-var deaths = [];
-var minC = 0;
-var maxC = 0;
-var minD = 0;
-var maxD = 0;
-var confirmedMode = true;
-let modeBtn;
-
-function setup(){
-  	// Create a canvas 640x640
-	canvas = createCanvas(screen.width, screen.height);
-	myMap = mappa.tileMap(options); 
-   	// Overlay tile map on top of the canvas
-   	myMap.overlay(canvas);
-   	//myMap.onChange(redrawLocation);
-   	modeBtn = createButton("confirmed - deaths toggle");
-   	modeBtn.mousePressed(toggleMode);
-   	// start with APIs
-   	fetchInfo();
-}
-
-function toggleMode() {
-	if (confirmedMode) {
-		confirmedMode = false;
-	} else {
-		confirmedMode = true;
-	}
-}
+var covData;
 
 function fetchInfo() {
-	var data = JSON.parse('{{ data | tojson | safe }}');
-	//console.log(data);
-	data.forEach(ctr => {
-		if (ctr.latitude)
-			countries.push(ctr);
-	});
-	countries.forEach(ctr => {
-		confirmeds.push(Number(ctr.confirmed));	
-		deaths.push(Number(ctr.deaths));
-	});
-   	minC = Math.min(...confirmeds);	
-	maxC = Math.max(...confirmeds); 
-	minD = Math.min(...deaths);
-	maxD = Math.max(...deaths);
+  covData = JSON.parse('{{ data | tojson | safe }}');
+  console.log(covData);
 
 }
+fetchInfo()
+  // get number of cases based on name of region
+  function getCases(name) {
+    var s = covData[name];
+    if (typeof(s) !== 'undefined') {
+      return parseInt(s.infected);
+    } else {
+      return 0;
+    }
+  }
 
-function drawConfirmed() {
-	clear();
-	//console.log(minC, maxC);
-	//console.log(countries);
-	countries.forEach(ctr => {
-		if (ctr.confirmed != 0) {
-			let loc = myMap.latLngToPixel(ctr.latitude, ctr.longitude);
-			// console.log(myMap.zoom());	
-			let size = map(ctr.confirmed, minC, maxC, 1, 30);
-			//console.log(size);
-			size = size * Math.pow(2,myMap.zoom());
-			fill(70, 138, 70, 100);
-			let inc = (size / 10) * Math.sin(frameCount * 0.02);
-			ellipse(loc.x, loc.y, size + inc, size + inc);
-			// draw numbers
-			fill(213, 235, 52);
-			textSize(size/5);
-			text(ctr.confirmed, loc.x - size/5, loc.y);
-		}
-	});
-}
+  // control that shows state info on hover
+  var info = L.control();
 
-function drawDeaths() {
-	clear();
-	//console.log(minC, maxC);
-	//console.log(countries);
-	countries.forEach(ctr => {
-		if (ctr.deaths != 0) {
-			let loc = myMap.latLngToPixel(ctr.latitude, ctr.longitude);
-			// console.log(myMap.zoom());	
-			let size = map(ctr.deaths, minD, maxD, 1, 30);
-			//console.log(size);
-			size = size * Math.pow(2,myMap.zoom());
-			fill(204, 51, 31, 100);
-			let inc = (size / 10) * Math.sin(frameCount * 0.02);
-			ellipse(loc.x, loc.y, size + inc, size + inc);
-			// draw numbers
-			fill(213, 235, 52);
-			textSize(size/5);
-			text(ctr.deaths, loc.x - size/5, loc.y);
-		}
-	});	
-}
+  info.onAdd = function (map) {
+    this._div = L.DomUtil.create('div', 'info');
+    this.update();
+    return this._div;
+  };
+
+
+  info.update = function (props) {
+    this._div.innerHTML = '<h4>Number of cases</h4>' +  (props ?
+      '<b>' + props.name + '</b><br />' + getCases(props.name) + ' case(s)'
+      : 'Hover over a region');
+  };
+
+  info.addTo(mymap);
 
 
 
-// p5.js draw
-function draw(){
-	if (confirmedMode)
-		drawConfirmed();
-	else 
-		drawDeaths();
-}
+  
+  function getColor(d) {
+    console.log(d);
+// covData[feature.properties.name].infected
+    d = getCases(d);
+    console.log(d)
+    return d > 1000 ? '#800026' :
+        d > 500  ? '#BD0026' :
+        d > 200  ? '#E31A1C' :
+        d > 100  ? '#FC4E2A' :
+        d > 50   ? '#FD8D3C' :
+        d > 20   ? '#FEB24C' :
+        d > 10   ? '#FED976' :
+              '#FFEDA0';
+  }
+
+  function style(feature) {
+    return {
+      weight: 2,
+      opacity: 1,
+      color: 'white',
+      dashArray: '3',
+      fillOpacity: 0.7,
+      fillColor: getColor(feature.properties.name)
+    };
+  }
+
+
+  // mouse over
+  function highlightFeature(e) {
+    var layer = e.target;
+
+    layer.setStyle({
+      weight: 5,
+      color: '#666',
+      dashArray: '',
+      fillOpacity: 0.7
+    });
+
+    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+      layer.bringToFront();
+    }
+
+    info.update(layer.feature.properties);
+  }
+  // mouse out
+
+  var geojson;
+
+  function resetHighlight(e) {
+    geojson.resetStyle(e.target);
+    info.update();
+  }
+
+  function zoomToFeature(e) {
+    mymap.fitBounds(e.target.getBounds());
+  }
+
+    function onEachFeature(feature, layer) {
+    layer.on({
+      mouseover: highlightFeature,
+      mouseout: resetHighlight,
+      click: zoomToFeature
+    });
+  }
+
+    geojson = L.geoJson(vnData, {
+    style: style,
+    onEachFeature: onEachFeature
+  }).addTo(mymap);
+
+
   </script>
 
 </body>
